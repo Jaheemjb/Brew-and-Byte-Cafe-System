@@ -1,0 +1,262 @@
+
+"""Coffe Shop"""
+
+
+def get_menu():
+    menu= {
+        "C01":("Regular Coffe","Hot Drinks" ,350),
+        "C02":("Cappucino","Hot Drinks", 550),
+        "C03":("Hot Chocolate", "Hot Drinks",450),
+        "D01":("Iced Latte ", "Cold Drinks" ,600),
+        "D02":("Fruit Smoothie" , "Cold Drinks" , 750),
+        "D03":("Bottled Water", "Cold Drinks", 750),
+        "F01":("Beef Patty " , "Food", 400),
+        "F02":("Chicken Sandwich", "Food",850),
+        "F03":("Banna Muffin","Food",300),
+        "F04":("Ackee and Saltfish Wrap", "Food",950)
+
+    }
+
+    print (f"{'Code':<15} {'Item':<40} {'Category':<15}{'Price':>5}")
+    print(90*"=")
+
+
+
+def display_menu(menu):
+    for code, item in menu.items():
+
+         print(f"{code:<15} {item[0]:<40} {item[1]:<15} {item[2]:>5}")
+
+
+
+def display_main_menu():
+    print("1. View Item")
+    print("2. Add Item ")
+    print("3. Remove Item")
+    print("4. View Current Order")
+    print("5. Exit ")
+display_main_menu()
+
+def get_menu_choice(min_option,max_option):
+    while True:
+        try:
+            choice=int(input ("Select option"))
+            if min_option<= choice <=max_option:
+                return choice
+            else:
+                print("Invalid Option, Please Try again:")
+
+        except ValueError:
+            print("Please enter a Whole Number")
+
+
+
+
+
+def add_item(order,menu,code,quantity=1):
+    if code in menu:
+        if order in code:
+            try:
+                order[code]=+quantity
+            except ValueError:
+                print("Please select a item")
+        else:
+            order[code]=quantity
+    else:
+        print("Item not found")
+
+
+
+
+
+
+        for code, item in menu.items():
+            print(f"{code:<15} {item[0]:<40} {item[1]:<15} {item[2]:>5}")
+
+
+    pass
+def remove_item(order,code):
+        if order in code:
+            order[code].pop()
+            print("Item removed")
+        else:
+            print("Item not found")
+def view_current_order(order,menu):
+    if not order:
+        print("Your Cart is Empty")
+        return
+
+    print("======Current Items======")
+
+    for code, quantity,in order.items():
+        item=menu[code][0]
+        category=menu[code][1]
+        price = menu[code][1]
+        total =quantity*price
+
+        print(f"{item:<15} {category[0]:<40} {price[1]:<15} {total[2]:>5}")
+
+def main():
+    order={}
+    menu= get_menu()
+
+
+
+    while True:
+
+
+        choice= get_menu_choice(1,5)
+        if choice==1:
+                display_menu(menu)
+        elif choice==2:
+                display_menu(menu)
+                code=input("Please Select an item ")
+                if code in menu:
+                    quantity=get_menu_choice(1,100)
+                    add_item(order,menu,code,quantity)
+                    print("Item has been added")
+
+                else:
+                    print("Item has not been found")
+
+
+        elif choice==3:
+                 code=input("Enter Item to remove")
+
+                 if remove_item(order,code):
+                     print("Item has been remove")
+
+                 else:
+                     print("Item has not been found")
+
+        elif choice==4:
+
+                code= input("Do you want to view current items: Y/N")
+
+                if code=="Y":
+                 view_current_order(order,menu)
+                else:
+                  print(".....Exiting.....")
+                  break
+
+
+        elif choice==5:
+                print("Thank you for visiting Brew and Byte Cafe!")
+                break
+
+main()
+
+
+"""Part B- Billing Discounts"""
+
+def calculate_subtotal(order,menu):
+    for code, quantity, in order.items():
+        price = menu[code][2]
+        sub_total=quantity*price
+        sub_total+=1
+    return sub_total
+
+
+    pass
+
+def calculate_discount(sub_total,customer_type):
+    discount=0
+    if customer_type=="Student":
+        discount=(sub_total*0.10)+200
+
+    elif customer_type=="Teacher":
+        discount = (sub_total*0.05)+200
+    if sub_total>=2500:
+        discount+=200
+    return discount
+
+    pass
+def calculate_tax(amount,rate=GCT_RATE):
+    rate=0.15
+    tax=amount*rate
+    return tax
+
+
+def calculate_total(order,menu,customer_type):
+    sub_total=calculate_subtotal(order,menu)
+    discount=calculate_discount(sub_total,customer_type)
+    taxable_amount=sub_total-discount
+    tax=calculate_tax(taxable_amount,0.15)
+    total= taxable_amount+tax
+    return sub_total,discount,tax,total
+
+    pass
+def get_valid_quantity_prompt(prompt):
+    for prompt in range (1,20):
+        try:
+            prompt=input(int("Please Enter "))
+        except ValueError:
+            print("Please Enter a Whole Number")
+
+def get_valid_code(prompt,menu):
+    while True:
+        if prompt in menu:
+            prompt=input("Please Enter").upper()
+            return prompt
+        else:
+            print("Incorrect! Please Try Again")
+
+    pass
+def get_yes_or_no(prompt):
+    while True:
+        answer=input(prompt)
+        if answer== "y" or "Yes":
+            return True
+        elif answer=="n"or"No":
+            return False
+        else:
+            print("Please Enter y/Yes or n/No")
+
+
+
+    pass
+
+
+def print_receipt(order,menu,totals,customer_type):
+
+    subtotal, discount, tax, total = totals
+
+    print("\n========== BREW AND BYTE CAFE ==========")
+    print("                ++RECEIPT++")
+    print("========================================")
+
+    for code, quantity, in order.items():
+        name = menu[code][0]
+        price = menu[code][1]
+
+        main_total=quantity*price
+
+        print(f"{name:<25} {quantity:>3} x ${price:>8.2f}")
+        print(f"{'Line Total:':<25} ${main_total:>8.2f}")
+
+    print("----------------------------------------")
+    print(f"{'Subtotal:':<25} ${subtotal:>8.2f}")
+    print(f"{'Discount:':<25} ${discount:>8.2f}")
+    print(f"{'GCT (15%):':<25} ${tax:>8.2f}")
+    print("----------------------------------------")
+    print(f"{'TOTAL:':<25} ${total:>8.2f}")
+    print("========================================")
+    print("       Thank you for your purchase!")
+
+def load_menu():
+    pass
+def load_loyalty():
+    pass
+def register_members():
+    pass
+def award_points():
+    pass
+def redeem_points():
+    pass
+
+def save_order():
+    pass
+def generate_daily_report():
+    pass
+def display_report():
+    pass
