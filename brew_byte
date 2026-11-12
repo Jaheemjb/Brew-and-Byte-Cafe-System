@@ -1,262 +1,602 @@
+"""
+Brew & Byte Café Ordering System
+Course: ITT212 Python Programming
+"""
 
-"""Coffe Shop"""
+import os
+from datetime import datetime
+
+GCT_RATE = 0.15
+MANAGER_PIN = "1234"
+MENU_FILE = "menu.txt"
+LOYALTY_FILE = "loyalty.txt"
+ORDERS_FILE = "orders.txt"
 
 
-def get_menu():
-    menu= {
-        "C01":("Regular Coffe","Hot Drinks" ,350),
-        "C02":("Cappucino","Hot Drinks", 550),
-        "C03":("Hot Chocolate", "Hot Drinks",450),
-        "D01":("Iced Latte ", "Cold Drinks" ,600),
-        "D02":("Fruit Smoothie" , "Cold Drinks" , 750),
-        "D03":("Bottled Water", "Cold Drinks", 750),
-        "F01":("Beef Patty " , "Food", 400),
-        "F02":("Chicken Sandwich", "Food",850),
-        "F03":("Banna Muffin","Food",300),
-        "F04":("Ackee and Saltfish Wrap", "Food",950)
-
+# ==========================================
+# PART A: MENU AND ORDER FUNCTIONS
+# ==========================================
+# Returns the default starter menu as a dictionary
+def get_menu() :
+    menu = {
+        "C01": ("Regular Coffee", "Hot Drinks", 350.00),
+        "C02": ("Cappuccino", "Hot Drinks", 550.00),
+        "C03": ("Hot Chocolate", "Hot Drinks", 450.00),
+        "D01": ("Iced Latte", "Cold Drinks", 600.00),
+        "D02": ("Fruit Smoothie", "Cold Drinks", 750.00),
+        "D03": ("Bottled Water", "Cold Drinks", 150.00),
+        "F01": ("Beef Patty", "Food", 400.00),
+        "F02": ("Chicken Sandwich", "Food", 850.00),
+        "F03": ("Banana Muffin", "Food", 300.00),
+        "F04": ("Ackee and Saltfish Wrap", "Food", 950.00)
     }
+    return menu
 
-    print (f"{'Code':<15} {'Item':<40} {'Category':<15}{'Price':>5}")
-    print(90*"=")
-
-
-
+# Prints the menu grouped by category in a neat table
 def display_menu(menu):
-    for code, item in menu.items():
+    print("\n" + "=" * 65)
+    print(f"{'BREW & BYTE CAFÉ MENU':^65}")
+    print("=" * 65)
 
-         print(f"{code:<15} {item[0]:<40} {item[1]:<15} {item[2]:>5}")
+    categories = []
+    for item in menu.values():
+        if item[1] not in categories:
+            categories.append(item[1])
+
+    for category in categories:
+        print(f"\n--- {category.upper()} ---")
+        print(f"{'Code':<8} {'Item':<32} {'Price':>18}")
+        print("-" * 65)
+        for code, item in menu.items():
+            if item[1] == category:
+                price_str = f"${item[2]:,.2f} JMD"
+                print(f"{code:<8} {item[0]:<32} {price_str:>18}")
+    print("=" * 65)
+
+# Prints the header with current order status and the main menu options
+def display_main_menu(order, menu) :
+    total_items = sum(order.values())
+    subtotal = calculate_subtotal(order, menu)
+
+    print("\n" + "=" * 48)
+    print(f"{'BREW & BYTE CAFÉ':^48}")
+    print(f"{'Campus Ordering System':^48}")
+    print("=" * 48)
+    print(f"Current order: {total_items} item(s)   Subtotal: ${subtotal:,.2f} JMD")
+    print("-" * 48)
+    print("1. View menu")
+    print("2. Add item to order")
+    print("3. Remove item from order")
+    print("4. View current order")
+    print("5. Update item quantity")
+    print("6. Checkout")
+    print("7. Cancel order")
+    print("8. Manager options")
+    print("0. Exit")
+    print("-" * 48)
 
 
-
-def display_main_menu():
-    print("1. View Item")
-    print("2. Add Item ")
-    print("3. Remove Item")
-    print("4. View Current Order")
-    print("5. Exit ")
-display_main_menu()
-
-def get_menu_choice(min_option,max_option):
+# Prompts until the user enters a valid menu number in range
+def get_menu_choice(min_option, max_option):
     while True:
         try:
-            choice=int(input ("Select option"))
-            if min_option<= choice <=max_option:
+            choice = int(input(f"Enter your choice ({min_option}-{max_option}): "))
+            if min_option <= choice <= max_option:
                 return choice
             else:
-                print("Invalid Option, Please Try again:")
-
+                print(f"Invalid choice. Please enter a number from {min_option} to {max_option}.")
         except ValueError:
-            print("Please enter a Whole Number")
+            print("Invalid input. Please enter a whole number.")
 
-
-
-
-
-def add_item(order,menu,code,quantity=1):
+# Adds an item to the order or updates its quantity
+def add_item(order, menu, code, quantity=1):
+    code = code.upper()
     if code in menu:
-        if order in code:
-            try:
-                order[code]=+quantity
-            except ValueError:
-                print("Please select a item")
+        if code in order:
+            order[code] += quantity
         else:
-            order[code]=quantity
-    else:
-        print("Item not found")
+            order[code] = quantity
+    return order
 
+# Removes an item from the order if it exists
+def remove_item(order, code):
+    code = code.upper()
+    if code in order:
+        order.pop(code)
+        return True
+    return False
 
-
-
-
-
-        for code, item in menu.items():
-            print(f"{code:<15} {item[0]:<40} {item[1]:<15} {item[2]:>5}")
-
-
-    pass
-def remove_item(order,code):
-        if order in code:
-            order[code].pop()
-            print("Item removed")
-        else:
-            print("Item not found")
-def view_current_order(order,menu):
+# Prints all items in the current order along with their totals
+def view_order(order, menu):
+    
     if not order:
-        print("Your Cart is Empty")
+        print("\nYour order is currently empty.")
         return
 
-    print("======Current Items======")
+    print("\n" + "=" * 72)
+    print(f"{'CURRENT ORDER':^72}")
+    print("=" * 72)
+    print(f"{'Code':<6} {'Item':<26} {'Qty':>5} {'Unit Price':>16} {'Line Total':>16}")
+    print("-" * 72)
 
-    for code, quantity,in order.items():
-        item=menu[code][0]
-        category=menu[code][1]
-        price = menu[code][1]
-        total =quantity*price
-
-        print(f"{item:<15} {category[0]:<40} {price[1]:<15} {total[2]:>5}")
-
-def main():
-    order={}
-    menu= get_menu()
-
-
-
-    while True:
-
-
-        choice= get_menu_choice(1,5)
-        if choice==1:
-                display_menu(menu)
-        elif choice==2:
-                display_menu(menu)
-                code=input("Please Select an item ")
-                if code in menu:
-                    quantity=get_menu_choice(1,100)
-                    add_item(order,menu,code,quantity)
-                    print("Item has been added")
-
-                else:
-                    print("Item has not been found")
-
-
-        elif choice==3:
-                 code=input("Enter Item to remove")
-
-                 if remove_item(order,code):
-                     print("Item has been remove")
-
-                 else:
-                     print("Item has not been found")
-
-        elif choice==4:
-
-                code= input("Do you want to view current items: Y/N")
-
-                if code=="Y":
-                 view_current_order(order,menu)
-                else:
-                  print(".....Exiting.....")
-                  break
-
-
-        elif choice==5:
-                print("Thank you for visiting Brew and Byte Cafe!")
-                break
-
-main()
-
-
-"""Part B- Billing Discounts"""
-
-def calculate_subtotal(order,menu):
-    for code, quantity, in order.items():
+    for code, quantity in order.items():
+        name = menu[code][0]
         price = menu[code][2]
-        sub_total=quantity*price
-        sub_total+=1
-    return sub_total
+        line_total = quantity * price
+        unit_str = f"${price:,.2f} JMD"
+        line_str = f"${line_total:,.2f} JMD"
+        print(f"{code:<6} {name:<26} {quantity:>5} {unit_str:>16} {line_str:>16}")
+
+    subtotal = calculate_subtotal(order, menu)
+    print("-" * 72)
+    print(f"{'Subtotal:':<54} ${subtotal:,.2f} JMD")
+    print("=" * 72)
 
 
-    pass
+# ==========================================
+# PART B: BILLING, DISCOUNTS AND VALIDATION
+# ==========================================
+# Calculates and returns the subtotal of the order
+def calculate_subtotal(order, menu):
+    subtotal = 0.0
+    for code, quantity in order.items():
+        if code in menu:
+            price = menu[code][2]
+            subtotal += quantity * price
+    return subtotal
 
-def calculate_discount(sub_total,customer_type):
-    discount=0
-    if customer_type=="Student":
-        discount=(sub_total*0.10)+200
+# Calculates student/staff ID discount and bulk order discount
+def calculate_discount(subtotal, customer_type):
+    discount = 0.0
+    c_type = customer_type.lower()
 
-    elif customer_type=="Teacher":
-        discount = (sub_total*0.05)+200
-    if sub_total>=2500:
-        discount+=200
+    if c_type == "student":
+        discount += subtotal * 0.10
+    elif c_type == "staff":
+        discount += subtotal * 0.05
+
+    if subtotal >= 2500:
+        discount += 200.0
+
+    # Ensure discount never exceeds subtotal
+    if discount > subtotal:
+        discount = subtotal
+
     return discount
 
-    pass
-def calculate_tax(amount,rate=GCT_RATE):
-    rate=0.15
-    tax=amount*rate
-    return tax
+# Calculates GCT tax on the given amount
+def calculate_tax(amount, rate=GCT_RATE):
+    return amount * rate
 
+# Calculates subtotal, discount, tax, and final total
+def calculate_total(order, menu, customer_type):
+    subtotal = calculate_subtotal(order, menu)
+    discount = calculate_discount(subtotal, customer_type)
+    taxable_amount = subtotal - discount
+    tax = calculate_tax(taxable_amount, GCT_RATE)
+    total = taxable_amount + tax
+    return (subtotal, discount, tax, total)
 
-def calculate_total(order,menu,customer_type):
-    sub_total=calculate_subtotal(order,menu)
-    discount=calculate_discount(sub_total,customer_type)
-    taxable_amount=sub_total-discount
-    tax=calculate_tax(taxable_amount,0.15)
-    total= taxable_amount+tax
-    return sub_total,discount,tax,total
-
-    pass
-def get_valid_quantity_prompt(prompt):
-    for prompt in range (1,20):
+# Prompts until the user enters a valid quantity between 1 and 20
+def get_valid_quantity(prompt):
+    while True:
         try:
-            prompt=input(int("Please Enter "))
+            qty = int(input(prompt))
+            if 1 <= qty <= 20:
+                return qty
+            else:
+                print("Invalid quantity. Please enter a number from 1 to 20.")
         except ValueError:
-            print("Please Enter a Whole Number")
+            print("Invalid input. Please enter a whole number.")
 
-def get_valid_code(prompt,menu):
+# Prompts until the user enters an item code that exists in the menu
+def get_valid_code(prompt, menu):
     while True:
-        if prompt in menu:
-            prompt=input("Please Enter").upper()
-            return prompt
-        else:
-            print("Incorrect! Please Try Again")
+        code = input(prompt).strip().upper()
+        if code in menu:
+            return code
+        print("Item code not found. Please try again.")
 
-    pass
-def get_yes_or_no(prompt):
+# Prompts until the user enters y/yes or n/no
+def get_yes_no(prompt):
     while True:
-        answer=input(prompt)
-        if answer== "y" or "Yes":
+        answer = input(prompt).strip().lower()
+        if answer in ("y", "yes"):
             return True
-        elif answer=="n"or"No":
+        elif answer in ("n", "no"):
             return False
         else:
-            print("Please Enter y/Yes or n/No")
+            print("Invalid input. Please enter 'y' or 'n'.")
 
-
-
-    pass
-
-
-def print_receipt(order,menu,totals,customer_type):
-
+# Prints a formatted receipt showing all items and final totals
+def print_receipt(order, menu, totals, customer_type, free_coffee=False):
     subtotal, discount, tax, total = totals
 
-    print("\n========== BREW AND BYTE CAFE ==========")
-    print("                ++RECEIPT++")
-    print("========================================")
+    print("\n" + "=" * 46)
+    print(f"{'BREW & BYTE CAFÉ':^46}")
+    print("=" * 46)
 
-    for code, quantity, in order.items():
+    for code, quantity in order.items():
         name = menu[code][0]
-        price = menu[code][1]
+        price = menu[code][2]
+        line_total = quantity * price
+        print(f"{name:<24} x{quantity:<3} ${line_total:>11,.2f} JMD")
 
-        main_total=quantity*price
+    if free_coffee:
+        print(f"{'Regular Coffee (Reward)':<24} x1   ${0.00:>11,.2f} JMD")
 
-        print(f"{name:<25} {quantity:>3} x ${price:>8.2f}")
-        print(f"{'Line Total:':<25} ${main_total:>8.2f}")
+    print("-" * 46)
+    print(f"{'Subtotal':<28} ${subtotal:>11,.2f} JMD")
 
-    print("----------------------------------------")
-    print(f"{'Subtotal:':<25} ${subtotal:>8.2f}")
-    print(f"{'Discount:':<25} ${discount:>8.2f}")
-    print(f"{'GCT (15%):':<25} ${tax:>8.2f}")
-    print("----------------------------------------")
-    print(f"{'TOTAL:':<25} ${total:>8.2f}")
-    print("========================================")
-    print("       Thank you for your purchase!")
+    # Build discount label
+    labels = []
+    if customer_type.lower() in ("student", "staff"):
+        labels.append(customer_type.lower())
+    if subtotal >= 2500:
+        labels.append("bulk")
+    disc_label = f"Discount ({' + '.join(labels)})" if labels else "Discount"
 
-def load_menu():
-    pass
-def load_loyalty():
-    pass
-def register_members():
-    pass
-def award_points():
-    pass
-def redeem_points():
-    pass
+    print(f"{disc_label:<28}-${discount:>11,.2f} JMD")
+    print(f"{'GCT (15%)':<28} ${tax:>11,.2f} JMD")
+    print(f"{'TOTAL':<28} ${total:>11,.2f} JMD")
+    print("=" * 46)
+    print(f"{'Thank you for visiting Brew & Byte Café!':^46}")
+    print("=" * 46)
 
-def save_order():
-    pass
-def generate_daily_report():
-    pass
-def display_report():
-    pass
+
+# ==========================================
+# PART C: LOYALTY, REPORTS AND INTEGRATION
+# ==========================================
+# Reads the menu from a text file or loads the default menu if missing
+def load_menu(filename):
+    if not os.path.exists(filename):
+        print(f"Warning: '{filename}' not found. Loading default menu.")
+        return get_menu()
+
+    menu = {}
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split(",")
+                if len(parts) != 4:
+                    continue
+                code = parts[0].strip().upper()
+                name = parts[1].strip()
+                category = parts[2].strip()
+                price = float(parts[3].strip())
+                menu[code] = (name, category, price)
+    except (OSError, ValueError):
+        print(f"Warning: Error reading '{filename}'. Loading default menu.")
+        return get_menu()
+
+    if not menu:
+        print(f"Warning: '{filename}' is empty or invalid. Loading default menu.")
+        return get_menu()
+
+    return menu
+
+# Reads loyalty members from a file into a dictionary
+def load_loyalty(filename):
+    members = {}
+    if not os.path.exists(filename):
+        return members
+
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split(",")
+                if len(parts) != 3:
+                    continue
+                member_id = parts[0].strip().upper()
+                name = parts[1].strip()
+                points = int(parts[2].strip())
+                members[member_id] = {"name": name, "points": points}
+    except (OSError, ValueError):
+        print("Warning: Could not read loyalty file properly.")
+    return members
+
+# Writes the loyalty members dictionary to a file
+def save_loyalty(filename, members):
+    try:
+        with open(filename, "w", encoding="utf-8") as file:
+            for member_id, info in members.items():
+                file.write(f"{member_id},{info['name']},{info['points']}\n")
+    except OSError:
+        print("Error: Could not save loyalty data.")
+
+ #Registers a new loyalty member with a unique ID and 0 points.
+ # Generate a unique ID like M001, M002, etc.
+
+def register_member(members):
+    name = input("Enter new member's full name: ").strip()
+    while not name:
+        print("Name cannot be empty.")
+        name = input("Enter new member's full name: ").strip()
+    next_num = len(members) + 1
+    member_id = f"M{next_num:03d}"
+    while member_id in members:
+        next_num += 1
+        member_id = f"M{next_num:03d}"
+
+    members[member_id] = {"name": name, "points": 0}
+    print(f"Registered {name} with Member ID: {member_id} (0 points).")
+    return members
+
+# Adds 1 point per $100 spent to a loyalty member.
+def award_points(members, member_id, amount_spent):
+    member_id = member_id.upper()
+    if member_id not in members:
+        return 0
+    earned = int(amount_spent // 100)
+    members[member_id]["points"] += earned
+    return earned
+
+ # Deducts 50 points and adds one free Regular Coffee (price $0) if eligible.
+  # Track free coffee using a special key or flag in order
+
+def redeem_points(members, member_id, order):
+    member_id = member_id.upper()
+    if member_id in members and members[member_id]["points"] >= 50:
+        members[member_id]["points"] -= 50
+        order["FREE_C01"] = order.get("FREE_C01", 0) + 1
+        return True
+    return False
+
+ #  Appends a completed order with date and time to the orders file.
+def save_order(filename, order, totals):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    subtotal, discount, tax, total = totals
+    items_str = ";".join(f"{code}:{qty}" for code, qty in order.items())
+
+    try:
+        with open(filename, "a", encoding="utf-8") as file:
+            file.write(f"{timestamp}|{items_str}|{subtotal:.2f}|{discount:.2f}|{tax:.2f}|{total:.2f}\n")
+    except OSError:
+        print("Error: Could not save order record.")
+
+
+#     Helper function to read saved orders from the orders file safely.
+def load_orders(filename):
+    
+    orders = []
+    if not os.path.exists(filename):
+        return orders
+
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split("|")
+                if len(parts) != 6:
+                    continue
+                items_dict = {}
+                for pair in parts[1].split(";"):
+                    if ":" in pair:
+                        code, qty = pair.split(":")
+                        items_dict[code] = int(qty)
+                orders.append({
+                    "timestamp": parts[0],
+                    "items": items_dict,
+                    "subtotal": float(parts[2]),
+                    "discount": float(parts[3]),
+                    "tax": float(parts[4]),
+                    "total": float(parts[5])
+                })
+    except (OSError, ValueError):
+        print("Warning: Error reading orders file.")
+    return orders
+
+# Generates a summary report dictionary from completed orders.
+def generate_daily_report(orders, menu):
+    order_count = len(orders)
+    total_revenue = 0.0
+    total_tax = 0.0
+    item_counts = {}
+
+    for ord_data in orders:
+        total_revenue += ord_data["total"]
+        total_tax += ord_data["tax"]
+        for code, qty in ord_data["items"].items():
+            clean_code = code.replace("FREE_", "")
+            item_counts[clean_code] = item_counts.get(clean_code, 0) + qty
+
+    best_item = "None"
+    if item_counts:
+        best_code = max(item_counts, key=item_counts.get)
+        best_name = menu[best_code][0] if best_code in menu else best_code
+        best_item = f"{best_name} ({item_counts[best_code]} sold)"
+
+    return {
+        "order_count": order_count,
+        "total_revenue": total_revenue,
+        "total_tax": total_tax,
+        "best_selling_item": best_item
+    }
+
+# Prints the daily sales report in a clear layout.
+def display_report(report): 
+    print("\n" + "=" * 48)
+    print(f"{'DAILY SALES SUMMARY REPORT':^48}")
+    print("=" * 48)
+    print(f"{'Total Orders:':<25} {report['order_count']}")
+    print(f"{'Total Revenue:':<25} ${report['total_revenue']:,.2f} JMD")
+    print(f"{'Total GCT Collected:':<25} ${report['total_tax']:,.2f} JMD")
+    print(f"{'Best-Selling Item:':<25} {report['best_selling_item']}")
+    print("=" * 48)
+
+#     Displays all registered loyalty members and their points.
+def display_loyalty_members(members):
+    if not members:
+        print("\nNo loyalty members registered yet.")
+        return
+
+    print("\n" + "=" * 52)
+    print(f"{'LOYALTY MEMBERS':^52}")
+    print("=" * 52)
+    print(f"{'ID':<10} {'Name':<28} {'Points':>10}")
+    print("-" * 52)
+    for member_id, info in members.items():
+        print(f"{member_id:<10} {info['name']:<28} {info['points']:>10}")
+    print("=" * 52)
+
+# Handles PIN verification and runs the manager sub-menu.
+def handle_manager_menu(members, menu):
+    pin = input("Enter manager PIN: ").strip()
+    if pin != MANAGER_PIN:
+        print("Incorrect PIN. Access denied.")
+        return
+
+    while True:
+        print("\n---------- MANAGER OPTIONS ----------")
+        print("1. View daily sales report")
+        print("2. Register loyalty member")
+        print("3. View loyalty members")
+        print("0. Return to main menu")
+        print("-------------------------------------")
+
+        choice = get_menu_choice(0, 3)
+        if choice == 1:
+            orders = load_orders(ORDERS_FILE)
+            report = generate_daily_report(orders, menu)
+            display_report(report)
+        elif choice == 2:
+            register_member(members)
+            save_loyalty(LOYALTY_FILE, members)
+        elif choice == 3:
+            display_loyalty_members(members)
+        elif choice == 0:
+            break
+
+# Prompts for customer type (student, staff, or regular) for discounts.
+def get_customer_type():
+    print("\nCustomer Type:")
+    print("1. Regular (No ID discount)")
+    print("2. Student (10% discount with valid ID)")
+    print("3. Staff (5% discount with valid ID)")
+    choice = get_menu_choice(1, 3)
+    if choice == 2:
+        return "student"
+    elif choice == 3:
+        return "staff"
+    return "regular"
+
+   # Processes customer discounts, loyalty points, receipt printing, and saving.
+def handle_checkout(order, menu, members):
+    if not order:
+        print("\nCannot checkout. Your order is empty.")
+        return False
+
+    customer_type = get_customer_type()
+    totals = calculate_total(order, menu, customer_type)
+
+    member_id = None
+    free_coffee = False
+
+    if get_yes_no("Is the customer a loyalty member? (y/n): "):
+        entered_id = input("Enter Member ID (e.g., M001): ").strip().upper()
+        if entered_id in members:
+            member_id = entered_id
+            pts = members[member_id]["points"]
+            print(f"Welcome back, {members[member_id]['name']}! Current points: {pts}")
+            if pts >= 50:
+                if get_yes_no("You have 50+ points! Redeem 50 points for a free Regular Coffee? (y/n): "):
+                    if redeem_points(members, member_id, order):
+                        free_coffee = True
+                        print("50 points redeemed! Free Regular Coffee added.")
+        else:
+            print("Member ID not found. Proceeding without loyalty account.")
+
+    # Print receipt (exclude FREE_C01 from paid items list since print_receipt handles it)
+    paid_order = {k: v for k, v in order.items() if k != "FREE_C01"}
+    print_receipt(paid_order, menu, totals, customer_type, free_coffee)
+
+    # Award points based on final total spent
+    if member_id:
+        earned = award_points(members, member_id, totals[3])
+        save_loyalty(LOYALTY_FILE, members)
+        print(f"Loyalty points earned: {earned} | New balance: {members[member_id]['points']} pts")
+
+    save_order(ORDERS_FILE, order, totals)
+    order.clear()
+    return True
+
+
+# ==========================================
+# MAIN PROGRAM LOOP
+# ==========================================
+
+# Runs the main application loop for the Brew & Byte Café Ordering System.
+def main():
+    menu = load_menu(MENU_FILE)
+    members = load_loyalty(LOYALTY_FILE)
+    order = {}
+
+    while True:
+        display_main_menu(order, menu)
+        choice = get_menu_choice(0, 8)
+
+        if choice == 1:
+            display_menu(menu)
+
+        elif choice == 2:
+            display_menu(menu)
+            code = get_valid_code("Enter item code: ", menu)
+            quantity = get_valid_quantity("Enter quantity (1-20): ")
+            add_item(order, menu, code, quantity)
+            print(f"Added {quantity} x {menu[code][0]} to the order.")
+
+        elif choice == 3:
+            if not order:
+                print("\nYour order is empty. Nothing to remove.")
+            else:
+                view_order(order, menu)
+                code = input("Enter item code to remove: ").strip().upper()
+                if remove_item(order, code):
+                    print(f"Removed {code} from the order.")
+                else:
+                    print("Item code not found in your current order.")
+
+        elif choice == 4:
+            view_order(order, menu)
+
+        elif choice == 5:
+            if not order:
+                print("\nYour order is empty. Nothing to update.")
+            else:
+                view_order(order, menu)
+                code = input("Enter item code to update: ").strip().upper()
+                if code in order:
+                    new_qty = get_valid_quantity("Enter new quantity (1-20): ")
+                    order[code] = new_qty
+                    print(f"Updated {menu[code][0]} quantity to {new_qty}.")
+                else:
+                    print("Item code not found in your current order.")
+
+        elif choice == 6:
+            handle_checkout(order, menu, members)
+
+        elif choice == 7:
+            if not order:
+                print("\nOrder is already empty.")
+            elif get_yes_no("Are you sure you want to cancel the current order? (y/n): "):
+                order.clear()
+                print("Order cancelled.")
+
+        elif choice == 8:
+            handle_manager_menu(members, menu)
+
+        elif choice == 0:
+            print("Thank you for using Brew & Byte Café Ordering System. Goodbye!")
+            break
+
+
+if __name__ == "__main__":
+    main()
